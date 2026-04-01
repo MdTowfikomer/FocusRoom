@@ -1,0 +1,521 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #3B82F6;
+  --primary-light: #60A5FA;
+  --primary-dark: #2563EB;
+  --accent: #7C3AED;
+  --cta-primary: #2563EB;
+  --cta-secondary: transparent;
+  --bg-dark-start: #0B0F1A;
+  --bg-dark-mid: #111B3A;
+  --bg-dark-end: #1E1A4A;
+  --bg-gradient-accent: #3B1E8E;
+  --text-white: #FFFFFF;
+  --text-muted: #94A3B8;
+  --text-light: #CBD5E1;
+  --nav-bg: rgba(11, 15, 26, 0.6);
+  --banner-bg: rgba(30, 40, 80, 0.7);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --shadow-glow: 0 0 60px rgba(59, 130, 246, 0.15);
+  --transition-fast: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-mid: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   LANDING PAGE CONTAINER
+   ============================================ */
+.landingPageContainer {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(
+    165deg,
+    var(--bg-dark-start) 0%,
+    var(--bg-dark-mid) 30%,
+    var(--bg-dark-end) 60%,
+    var(--bg-gradient-accent) 100%
+  );
+  color: var(--text-white);
+  position: relative;
+  overflow-x: hidden;
+  overflow: hidden;
+}
+
+/* Subtle radial glow overlays for depth */
+.landingPageContainer::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landingPageContainer::after {
+  content: '';
+  position: absolute;
+  bottom: -10%;
+  right: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landingPageContainer .mouse-glow{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  transition: background 0.1s ease-out;
+}
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+.landingPageContainer nav {
+  position: relative;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0 3rem;
+  height: 72px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 100;
+  transition: background var(--transition-mid);
+}
+
+.navTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navTitle h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text-white) 0%, var(--primary-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.landingPageContainer nav .navList {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.navList p {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-light);
+  transition: color var(--transition-fast);
+  cursor: pointer;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+.navList p::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 1px;
+  transition: width var(--transition-mid);
+}
+
+.navList p:hover {
+  color: var(--text-white);
+}
+
+.navList p:hover::after {
+  width: 100%;
+}
+
+/* Nav CTA Buttons Container */
+.navActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Contact Sales - Outlined Button */
+.navList div[role="button"].btn-outline,
+.btn-outline {
+  border: 1.5px solid var(--border-subtle);
+  background: transparent;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-outline:hover {
+  border-color: var(--primary-light);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.btn-outline p {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-white);
+}
+
+.btn-outline p:hover {
+  color: var(--text-white);
+}
+
+.btn-outline p::after {
+  display: none;
+}
+
+/* Sign Up Free - Filled Button */
+.navList div[role="button"].btn-primary,
+.btn-primary {
+  background: var(--cta-primary);
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+}
+
+.btn-primary p {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-white);
+}
+
+.btn-primary p:hover {
+  color: var(--text-white);
+}
+
+.btn-primary p::after {
+  display: none;
+}
+
+/* ============================================
+   ANNOUNCEMENT BANNER
+   ============================================ */
+.announcementBanner {
+  margin-top: 72px;
+  padding: 0.65rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--banner-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 10;
+}
+
+.announcementBanner p {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+.announcementBanner .learnMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.85rem;
+  background: var(--primary);
+  color: var(--text-white);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  text-decoration: none;
+}
+
+.announcementBanner .learnMoreBtn:hover {
+  background: var(--primary-dark);
+}
+
+.announcementBanner .closeBtn {
+  position: absolute;
+  right: 1.5rem;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+}
+
+.announcementBanner .closeBtn:hover {
+  color: var(--text-white);
+}
+
+/* ============================================
+   HERO SECTION
+   ============================================ */
+.landingMainContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: calc(100vh - 72px - 42px);
+  padding: 4rem 2rem 6rem;
+  position: relative;
+  z-index: 1;
+}
+
+.mainContainText {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mainContainText h1 {
+  font-size: 3.75rem;
+  line-height: 1.12;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  color: var(--text-white);
+}
+
+.mainContainText h1 span {
+  color: var(--text-white) !important;
+  /* No colored span - Zoom keeps heading all white */
+}
+
+.mainContainText p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  max-width: 580px;
+  margin-bottom: 2.5rem;
+}
+
+/* Hero CTA Buttons */
+.heroCTAGroup {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.heroCTAGroup .btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 2rem;
+  background: var(--cta-primary);
+  color: var(--text-white);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+}
+
+.heroCTAGroup .btn-hero-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.45);
+}
+
+.heroCTAGroup .btn-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 2rem;
+  background: transparent;
+  color: var(--text-white);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.heroCTAGroup .btn-hero-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Old button style override for backward compat */
+.mainContainText div[role="button"] {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  width: auto;
+}
+
+.mainContainText div[role="button"] a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 2rem;
+  background: var(--cta-primary);
+  color: var(--text-white);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+}
+
+.mainContainText div[role="button"] a:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.45);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .landingPageContainer nav {
+    padding: 0 2rem;
+  }
+
+  .mainContainText h1 {
+    font-size: 2.75rem;
+    letter-spacing: -1px;
+  }
+
+  .mainContainText p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .landingPageContainer nav {
+    padding: 0 1.25rem;
+    height: 64px;
+  }
+
+  .announcementBanner {
+    margin-top: 64px;
+    padding: 0.5rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .announcementBanner .closeBtn {
+    right: 0.75rem;
+  }
+
+  .landingMainContainer {
+    min-height: calc(100vh - 64px - 38px);
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  .mainContainText h1 {
+    font-size: 2.25rem;
+    letter-spacing: -0.5px;
+  }
+
+  .mainContainText p {
+    font-size: 0.95rem;
+  }
+
+  .heroCTAGroup {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .heroCTAGroup .btn-hero-primary,
+  .heroCTAGroup .btn-hero-secondary {
+    width: 100%;
+  }
+
+  .navList p.nav-link-hide-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .landingPageContainer nav {
+    padding: 0 1rem;
+  }
+
+  .navTitle h2 {
+    font-size: 1.25rem;
+  }
+
+  .navList {
+    gap: 0.75rem !important;
+  }
+
+  .mainContainText h1 {
+    font-size: 1.85rem;
+  }
+
+  .mainContainText p {
+    font-size: 0.875rem;
+  }
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

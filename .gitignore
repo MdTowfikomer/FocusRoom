@@ -1,0 +1,26 @@
+# Dependency directories
+node_modules/
+backend/node_modules/
+FocusRoom/node_modules/
+
+# Environment variables
+.env
+backend/.env
+FocusRoom/.env
+*.local
+
+# Build outputs
+dist/
+build/
+FocusRoom/dist/
+out/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Project specific
+/socket_tut
+/resources
