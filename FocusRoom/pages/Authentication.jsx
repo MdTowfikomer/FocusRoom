@@ -27,7 +27,7 @@ function Authentication() {
 
   const { handleLogin, handleRegister } = useContext(AuthContext);
 
-  let handleAuth = async (e) => {
+  let handleAuth = async () => {
     // if (e) e.preventDefault();
     try {
       if (isLogin) {

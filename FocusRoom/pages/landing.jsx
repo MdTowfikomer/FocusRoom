@@ -31,10 +31,10 @@ function LandingPage() {
           <p className="nav-link-hide-mobile">Products</p>
           <p className="nav-link-hide-mobile">Solutions</p>
           <p className="nav-link-hide-mobile">Pricing</p>
-
+{/* 
           <div role="button" className="btn-outline">
             <p>Contact Sales</p>
-          </div>
+          </div> */}
           <Link to="/auth" className="btn-primary">
             <p>Sign Up Free</p>
           </Link>

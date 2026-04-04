@@ -24,3 +24,9 @@ Thumbs.db
 # Project specific
 /socket_tut
 /resources
+
+# Plan files
+plan/
+
+
+/focusroom-video

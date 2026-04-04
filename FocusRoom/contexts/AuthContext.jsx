@@ -20,37 +20,29 @@ export const AuthProvider = ({children}) => {
 
     const navigate = useNavigate();
     const handleRegister = async (username, email, password) =>{
-        try{
-            let request = await client.post('/register', {
-                username: username,
-                email: email,
-                password: password
-            })
-            if(request.status === httpStatus.CREATED){
-                request.data.message;
-            }
-            console.log(request.data);
-            navigate("/home");
-            return request.data;
-        }catch(err){
-            throw err;
+        let request = await client.post('/register', {
+            username: username,
+            email: email,
+            password: password
+        })
+        if(request.status === httpStatus.CREATED){
+            request.data.message;
         }
+        console.log(request.data);
+        navigate("/home");
+        return request.data;
     }
     const handleLogin = async (username, password)=>{
-        try{
-            let request = await client.post('/login', {
-                username,
-                password,
-            })
-            if(request.status === httpStatus.OK){
-                localStorage.setItem("token", request.data.token);
-            }
-            console.log(request.data);
-            navigate("/home");
-            return request.data;
-        }catch(err){
-            throw err;
+        let request = await client.post('/login', {
+            username,
+            password,
+        })
+        if(request.status === httpStatus.OK){
+            localStorage.setItem("token", request.data.token);
         }
+        console.log(request.data);
+        navigate("/home");
+        return request.data;
     }
 
     const data = {
