@@ -6,6 +6,7 @@ import { AuthProvider } from "../contexts/AuthContext";
 import VideosMeeting from "../pages/VideosMeeting";
 import { ThemeContextProvider } from "../contexts/ThemeContext";
 import CssBaseline from "@mui/material/CssBaseline";
+import Home from "../pages/home";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<Authentication />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/:url" element={<VideosMeeting />} />
           </Routes>
         </AuthProvider>

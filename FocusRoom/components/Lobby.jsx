@@ -228,7 +228,7 @@ export default function Lobby({
                     letterSpacing: '0.03em',
                   }}
                 >
-                  Camera is off / now check
+                  Camera is off 
                 </Typography>
               </Box>
             )}

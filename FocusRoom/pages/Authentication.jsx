@@ -27,8 +27,8 @@ function Authentication() {
 
   const { handleLogin, handleRegister } = useContext(AuthContext);
 
-  let handleAuth = async () => {
-    // if (e) e.preventDefault();
+  let handleAuth = async (e) => {
+    if (e) e.preventDefault();
     try {
       if (isLogin) {
         let result = await handleLogin(username, password);
@@ -123,7 +123,7 @@ function Authentication() {
           <div className="auth-form-container">
             <h1 className="auth-title">{isLogin ? "Sign in" : "Let's get started"}</h1>
 
-            <form onSubmit={(e) => e.preventDefault()}>
+            <form onSubmit={handleAuth}>
               <div className="auth-input-group">
                 {!isLogin && (
                   <>
@@ -175,14 +175,23 @@ function Authentication() {
                 type="submit"
                 className={`auth-btn ${isFormValid ? 'auth-btn-disabled' : ''}`}
                 disabled={isFormValid}
-                onSubmit={handleAuth}
               >
                 {isLogin ? "Next" : "Continue"} 
               </button>
             </form>
 
             <div className="auth-divider">
-              <span>{isLogin ? "Or sign in with" : "Or sign up with"}</span>
+              {isLogin ? (
+              <>
+                <span>New to FocusRoom?</span>
+                <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign Up Free</a>
+              </>
+            ) : (
+              <>
+                <span>Already have an account?</span>
+                <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign In</a>
+              </>
+            )}
             </div>
 
             <div className="social-login-group">

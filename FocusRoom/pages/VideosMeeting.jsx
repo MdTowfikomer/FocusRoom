@@ -7,7 +7,6 @@ import {
   Chat as ChatIcon, People, Close, Send,
   NavigateBefore, InfoOutlined, DarkMode, LightMode
 } from '@mui/icons-material';
-import { io } from "socket.io-client";
 import { styled, useTheme, alpha } from '@mui/material/styles';
 import { useColorMode } from '../contexts/ColorModeContext';
 
@@ -17,7 +16,6 @@ import Lobby from '../components/Lobby';
 import VideoTile from '../components/VideoTile';
 import MeetingControls from '../components/MeetingControls';
 
-const server_url = "http://localhost:8000";
 
 
 
@@ -69,7 +67,7 @@ const DynamicGrid = styled(Box, {
       ...common,
       gridTemplateColumns: '1fr',
       gridTemplateRows: '1fr',
-      padding: 0, 
+      padding: 0,
     };
   }
 
@@ -125,49 +123,41 @@ const ChatDrawer = styled(Drawer, {
 }));
 
 export default function VideosMeeting() {
-  
-  
-const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVideo, startMeeting, participantCount} = useWebRTC();
+
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  const {
+    localStream,
+    remoteVideos,
+    messages,
+    sendMessage: sendChatMessage,
+    toggleAudio,
+    toggleVideo,
+    getMedia,
+    startMeeting,
+    screenSharing,
+    toggleScreenShare,
+    participantCount
+  } = useWebRTC();
+
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [screenSharing, setScreenSharing] = useState(false);
 
   const [askForUsername, setAskForUsername] = useState(true);
   const [username, setUsername] = useState("");
-  const [message, setMessage] = useState("");
   const [showChat, setShowChat] = useState(false);
-
-
+  const [message, setMessage] = useState("");
   const mediaRequestInProgress = useRef(false);
 
-  // const participantCount = useMemo(() => videos.length + 1, [videos]);
-
-  const getPermission = useCallback(async () => {
-    if (mediaRequestInProgress.current || localStream) return;
-    mediaRequestInProgress.current = true;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
-    } catch (error) {
-      console.log("Hardware access failed:", error);
-    } finally {
-      mediaRequestInProgress.current = false;
-    }
-  }, [localStream]);
-
   useEffect(() => {
-    getPermission();
-    return () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      if (socketRef.current) socketRef.current.disconnect();
-    };
-  }, [getPermission, localStream]);
+    if (askForUsername && !localStream) {
+      getMedia();
+    }
+  }, [askForUsername, localStream, getMedia]);
+
+
 
   useEffect(() => {
     if (!localStream) return;
@@ -175,94 +165,27 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
     localStream.getAudioTracks().forEach(track => track.enabled = audioEnabled);
   }, [localStream, videoEnabled, audioEnabled]);
 
-  const connectToSocketServer = () => {
-    socketRef.current = io(server_url);
-
-    socketRef.current.on('signal', (fromId, message) => {
-      let signal = JSON.parse(message);
-      if (fromId === socketIdRef.current) return;
-
-      if (signal.sdp) {
-        if (!connections[fromId]) return;
-        connections[fromId].setRemoteDescription(new RTCSessionDescription(signal.sdp))
-          .then(() => {
-            if (signal.sdp.type === "offer") {
-              connections[fromId].createAnswer()
-                .then((description) => {
-                  connections[fromId].setLocalDescription(description)
-                    .then(() => {
-                      socketRef.current.emit("signal", fromId, JSON.stringify({ 'sdp': connections[fromId].localDescription }))
-                    })
-                });
-            }
-          });
-      }
-      if (signal.ice) {
-        if (!connections[fromId]) return;
-        connections[fromId].addIceCandidate(new RTCIceCandidate(signal.ice));
-      }
-    });
-
-    socketRef.current.on("connect", () => {
-      socketRef.current.emit('join-call', window.location.href);
-      socketIdRef.current = socketRef.current.id;
-
-      socketRef.current.on("chat-message", (data) => {
-        setMessages(prev => [...prev, data]);
-      });
-
-      socketRef.current.on("user-left", (id) => {
-        setVideos((videos) => videos.filter(v => v.socketId !== id));
-        delete connections[id];
-      });
-
-      socketRef.current.on("user-joined", (id, clients) => {
-        clients.forEach((socketIdList) => {
-          if (connections[socketIdList]) return;
-
-          connections[socketIdList] = new RTCPeerConnection(peerConnectionConfig);
-
-          connections[socketIdList].onicecandidate = (event) => {
-            if (event.candidate) {
-              socketRef.current.emit("signal", socketIdList, JSON.stringify({ 'ice': event.candidate }));
-            }
-          }
-
-          connections[socketIdList].ontrack = (event) => {
-            if (event.track.kind !== 'video') return;
-            setVideos((prev) => {
-              const exists = prev.find(v => v.socketId === socketIdList);
-              if (exists) return prev.map(v => v.socketId === socketIdList ? { ...v, stream: event.streams[0] } : v);
-              return [...prev, { socketId: socketIdList, stream: event.streams[0] }];
-            });
-          }
-
-          if (localStream) {
-            localStream.getTracks().forEach(track => connections[socketIdList].addTrack(track, localStream));
-          }
-        });
-
-        if (id === socketIdRef.current) {
-          for (let id2 in connections) {
-            connections[id2].createOffer().then(desc => {
-              connections[id2].setLocalDescription(desc).then(() => {
-                socketRef.current.emit("signal", id2, JSON.stringify({ "sdp": connections[id2].localDescription }));
-              });
-            });
-          }
-        }
-      });
-    });
-  }
+  // Action Handlers
 
   const handleJoin = () => {
     setAskForUsername(false);
-    connectToSocketServer();
+    startMeeting(username);
+  }
+
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      sendChatMessage(username, message);
+      setMessage("");
+    }
+  }
+
+  const handleScreen = () => {
+    toggleScreenShare();
   }
 
 
   const handleEndCall = () => {
-    window.location.href = "/";
+    window.location.href = "/home";
   }
 
   if (askForUsername) {
@@ -281,9 +204,38 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
     <MeetingWrapper>
       <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: alpha(theme.palette.divider, 0.1) }}>
         <Toolbar variant="dense">
-          <Typography variant="h6" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 800, fontFamily: 'Space Mono, monospace', fontSize: isMobile ? '0.7rem' : '0.9rem', letterSpacing: isMobile ? 1 : 2 }}>
-            {isMobile ? 'FOCUS_OS' : 'FOCUS_ROOM_OS'} // SESSION_{window.location.pathname.split('/').pop()?.substring(0, 4).toUpperCase()}
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
+            <Box sx={{ 
+              width: 24, 
+              height: 24, 
+              bgcolor: 'primary.main', 
+              borderRadius: 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: (theme) => `0 0 15px ${alpha(theme.palette.primary.main, 0.3)}`
+            }}>
+              <Box sx={{ width: 8, height: 8, bgcolor: 'white', borderRadius: '50%' }} />
+            </Box>
+            <Typography variant="h6" sx={{ 
+              color: 'text.primary', 
+              fontWeight: 800, 
+              fontFamily: '"Plus Jakarta Sans", sans-serif', 
+              fontSize: isMobile ? '0.9rem' : '1.1rem', 
+              letterSpacing: -0.5,
+              textTransform: 'none'
+            }}>
+              FocusRoom
+            </Typography>
+            <Typography variant="caption" sx={{ 
+              opacity: 0.4, 
+              fontFamily: '"Space Mono", monospace', 
+              ml: 2,
+              display: isMobile ? 'none' : 'block'
+            }}>
+              // SESSION_{window.location.pathname.split('/').pop()?.substring(0, 4).toUpperCase()}
+            </Typography>
+          </Stack>
           <Stack direction="row" spacing={isMobile ? 1 : 2} alignItems="center">
             <IconButton onClick={toggleColorMode} size="small" sx={{ border: 1, borderColor: alpha(theme.palette.divider, 0.1) }}>
               {theme.palette.mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
@@ -303,10 +255,10 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
         <DynamicGrid count={participantCount} isMobile={isMobile}>
           {participantCount === 2 ? (
             <>
-              {videos.map((v) => (
+              {remoteVideos.map((v) => (
                 <VideoTile
-                  key={v.socketId}
-                  username={`PEER_${v.socketId.substring(0, 4).toUpperCase()}`}
+                  key={v.id}
+                  username={`${username}`}
                   stream={v.stream}
                 />
               ))}
@@ -333,7 +285,7 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
               {remoteVideos.map((v) => (
                 <VideoTile
                   key={v.id}
-                  username={`PEER_${v.id.substring(0, 4).toUpperCase()}`}
+                  username={`${username}`}
                   stream={v.stream}
                 />
               ))}
@@ -349,7 +301,7 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
           sx={{ height: isMobile ? '80vh' : 'auto' }}
         >
           <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2 }}>Comm_Log</Typography>
+            <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2 }}>Chats</Typography>
             <IconButton onClick={() => setShowChat(false)} size="small"><Close fontSize="small" /></IconButton>
           </Box>
           <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
@@ -381,10 +333,10 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
               placeholder="INPUT_MESSAGE..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               sx={{ '& .MuiOutlinedInput-root': { fontFamily: 'Space Mono, monospace', fontSize: '0.8rem' } }}
             />
-            <IconButton color="primary" onClick={sendMessage} disabled={!message.trim()} sx={{ border: 1, borderColor: alpha(theme.palette.primary.main, 0.2) }}>
+            <IconButton color="primary" onClick={handleSendMessage} disabled={!message.trim()} sx={{ border: 1, borderColor: alpha(theme.palette.primary.main, 0.2) }}>
               <Send fontSize="small" />
             </IconButton>
           </Box>
@@ -393,11 +345,19 @@ const {localStream, remoteVideos, messages, sendMessage, toggleAudio, toggleVide
 
       <MeetingControls
         isMuted={!audioEnabled}
-        onToggleMute={() => setAudioEnabled(!audioEnabled)}
+        onToggleMute={() => {
+          const nextState = !audioEnabled;
+          setAudioEnabled(nextState);
+          toggleAudio(nextState);
+        }}
         isVideoOff={!videoEnabled}
-        onToggleVideo={() => setVideoEnabled(!videoEnabled)}
+        onToggleVideo={() => {
+          const nextState = !videoEnabled;
+          setVideoEnabled(nextState);
+          toggleVideo(nextState);
+        }}
         isScreenSharing={screenSharing}
-        onToggleScreenShare={() => setScreenSharing(!screenSharing)}
+        onToggleScreenShare={handleScreen}
         onEndCall={handleEndCall}
         onToggleChat={() => setShowChat(!showChat)}
         onToggleParticipants={() => { }}

@@ -22,86 +22,157 @@ export const useWebRTC = () => {
 
     // Handle Incoming Signals (offers/answers) & ICE candidates
     const handleSignal = useCallback(async (fromId, data) => {
-        const signal = JSON.parse(data);
-        const pc = connectionRef.current[fromId];
-        if (!pc) return;
-
         try {
-            // TODO: Implement "Perfect Negotiation" logic here
-            // 1. Check for collisions (Offer/Offer)
+            const signal = JSON.parse(data);
+            const pc = connectionRef.current[fromId];
+            if (!pc) return;
+
             if (signal.sdp) {
-                const offerCollision = signal.sdp.type === "offer" && makingOfferRef.current && !ignoreOfferRef.current;
-                if (offerCollision) {
-                    ignoreOfferRef.current = true;
-                    console.log("Ignoring offer (impolite peer)");
+                const offerCollision = signal.sdp.type === "offer" && 
+                    (makingOfferRef.current || pc.signalingState !== "stable");
+
+                ignoreOfferRef.current = !pc.isPolite && offerCollision;
+                if (ignoreOfferRef.current) {
+                    console.log("Ignoring offer (impolite peer collision)");
                     return;
                 }
-                // 2. Set remote description
-                await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp))
-                // 3. Create answer if it was an offer
+
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
                 if (signal.sdp.type === "offer") {
-                    pc.createAnswer()
-                        .then((description) => {
-                            pc.setLocalDescription(description)
-                                .then(() => {
-                                    emit("signal", fromId, JSON.stringify({ sdp: pc.localDescription }));
-                                })
-                        })
+                    await pc.setLocalDescription();
+                    emit("signal", fromId, JSON.stringify({ sdp: pc.localDescription }));
                 }
             } else if (signal.iceCandidate) {
-                await pc.addIceCandidate(new RTCIceCandidate(signal.iceCandidate));
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal.iceCandidate));
+                } catch (err) {
+                    if (!ignoreOfferRef.current) throw err;
+                }
             }
         } catch (error) {
-            if (!ignoreOfferRef.current) console.error("ICE Error", error)
+            console.error("Signal Handling Error:", error);
         }
-    }, []);
+    }, [emit]);
 
-    const createPeerConnection = useCallback((remoteSocketId, isPolite) => { //TODO: why we use isPolite?
+    const createPeerConnection = useCallback((remoteSocketId, isPolite) => {
         const pc = new RTCPeerConnection(peerConnectionConfig);
-        // TODO: Implement Event Listeners
-        // 1. onicecandidate -> emit signal with candidate
+        pc.isPolite = isPolite; // Store politeness on the PC object
+
         pc.onicecandidate = ((event) => {
             if (event.candidate) {
                 emit("signal", remoteSocketId, JSON.stringify({ iceCandidate: event.candidate }));
             }
         });
-        // 2. ontrack -> update remoteVideos state
+
         pc.ontrack = (event) => {
-            if (event.track.kind != 'video') return;
             setRemoteVideos((prev) => {
-                let exists = prev.find(v => v.id === remoteSocketId);
+                const exists = prev.find(v => v.id === remoteSocketId);
                 if (exists) return prev;
-                return [...prev, { id: remoteSocketId, stream: event.streams[0] }]
+                return [...prev, { id: remoteSocketId, stream: event.streams[0] }];
             });
-        }
-        // 3. onnegotiationneeded -> implement the "Perfect Negotiation" offer logic
+        };
+
         pc.onnegotiationneeded = async () => {
-            if (makingOfferRef.current) return;
-            makingOfferRef.current = true;
             try {
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
+                makingOfferRef.current = true;
+                await pc.setLocalDescription();
                 emit("signal", remoteSocketId, JSON.stringify({ sdp: pc.localDescription }));
             } catch (error) {
-                console.log(error);
+                console.error("Negotiation Needed Error:", error);
             } finally {
                 makingOfferRef.current = false;
             }
-        }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            if (pc.iceConnectionState === "failed") {
+                pc.restartIce();
+            }
+        };
 
         connectionRef.current[remoteSocketId] = pc;
         return pc;
-    }, [emit, localStream]);
+    }, [emit]);
 
-    // Start Meetin
-    //  1. Get Media 2. Connect Socket 3. Join Room
-
-    const startMeeting = useCallback(async (username) => {
+    const getMedia = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             setLocalStream(stream);
+            return stream;
+        } catch (error) {
+            console.error("Error accessing media devices:", error);
+            return null;
+        }
+    }, []);
 
-            const socket = connect();
+    const [screenSharing, setScreenSharing] = useState(false);
+
+    const toggleScreenShare = useCallback(async () => {
+        try {
+            if (!screenSharing) {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = stream.getVideoTracks()[0];
+
+                // Replace track in all peer connections
+                Object.values(connectionRef.current).forEach(pc => {
+                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) sender.replaceTrack(screenTrack);
+                });
+
+                setLocalStream(current => {
+                    const audioTracks = current ? current.getAudioTracks() : [];
+                    // Stop current video tracks
+                    if (current) current.getVideoTracks().forEach(track => track.stop());
+                    return new MediaStream([...audioTracks, screenTrack]);
+                });
+
+                setScreenSharing(true);
+
+                screenTrack.onended = () => {
+                    setScreenSharing(false);
+                    // Revert to camera
+                    getMedia().then(cameraStream => {
+                        if (cameraStream) {
+                            const cameraTrack = cameraStream.getVideoTracks()[0];
+                            Object.values(connectionRef.current).forEach(pc => {
+                                const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                                if (sender) sender.replaceTrack(cameraTrack);
+                            });
+                        }
+                    });
+                };
+            } else {
+                const cameraStream = await getMedia();
+                if (cameraStream) {
+                    const cameraTrack = cameraStream.getVideoTracks()[0];
+                    Object.values(connectionRef.current).forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) sender.replaceTrack(cameraTrack);
+                    });
+                }
+                setScreenSharing(false);
+            }
+        } catch (error) {
+            console.error("Screen sharing failed:", error);
+        }
+    }, [screenSharing, getMedia]);
+
+    // Start Meeting
+    //  1. Get Media (if not already acquired) 2. Connect Socket 3. Join Room
+
+    const startMeeting = useCallback(async (username) => {
+        try {
+            let stream = localStream;
+            if (!stream) {
+                stream = await getMedia();
+            }
+
+            if (!stream) {
+                console.error("Cannot start meeting without local stream");
+                return;
+            }
+
+            connect();
 
             on("connect", () => {
                 emit("join-call", window.location.href);
@@ -125,27 +196,28 @@ export const useWebRTC = () => {
 
             on("signal", handleSignal); //TODO: why we are not passing the parameters in the handleSignal function?
 
-            on("chat-message", (data) => {
-                setMessages(prev => [...prev, data]);
+            on("chat-message", (message, sender, socketId) => {
+                setMessages(prev => [...prev, { 
+                    sender, 
+                    message, 
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                }]);
             });
 
             on("user-left", (id) => {
                 if (connectionRef.current[id]) {
                     connectionRef.current[id].close();
-                    delete connectionRef.current[id]; //TODO: why we are deleting the connection?
-                    setRemoteVideos(prev => prev.filter(v => v.id !== id)); // if condition fall it will remove video right?
+                    delete connectionRef.current[id];
+                    setRemoteVideos(prev => prev.filter(v => v.id !== id));
                 }
             });
         } catch (error) {
             console.log(error);
         }
-    }, [connect, on, emit, handleSignal, createPeerConnection]); // why createPeerConnection ?
+    }, [connect, on, emit, handleSignal, createPeerConnection, localStream, getMedia, getSocketId]);
 
     const sendMessage = useCallback((username, text) => {
-        const data = { sender: username, message: text, time: new Date().toLocaleTimeString() };
-
-        emit("chat-message", data);
-        setMessages((prev) => [...prev, data]);
+        emit("chat-message", text, username);
     }, [emit]);
 
     const toggleAudio = useCallback((enabled) => {
@@ -176,7 +248,10 @@ export const useWebRTC = () => {
         sendMessage,
         toggleAudio,
         toggleVideo,
+        getMedia,
         startMeeting,
+        screenSharing,
+        toggleScreenShare,
         participantCount: remoteVideos.length + 1
     }
 }

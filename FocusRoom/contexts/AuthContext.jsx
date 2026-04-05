@@ -13,9 +13,10 @@ const client = axios.create({
 
 export const AuthProvider = ({children}) => {
     
-    const authContext = useContext(AuthContext);
+    // const authContext = useContext(AuthContext);
 
-    const [userData, setUserData] = useState(authContext);
+    const [userData, setUserData] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('token') || null);
     // Registration Logic that sends the user credentials to the backend
 
     const navigate = useNavigate();
@@ -33,20 +34,33 @@ export const AuthProvider = ({children}) => {
         return request.data;
     }
     const handleLogin = async (username, password)=>{
-        let request = await client.post('/login', {
-            username,
-            password,
-        })
-        if(request.status === httpStatus.OK){
-            localStorage.setItem("token", request.data.token);
+        try {
+            let request = await client.post('/login', {
+                username,
+                password,
+            })
+            if(request.status === httpStatus.OK){
+                localStorage.setItem("token", request.data.token);
+                setToken(request.data.token);
+                setUserData({ username }); // Mock user data for now
+                navigate("/home");
+            }
+            console.log(request.data);
+            return request.data;
+        } catch (error) {
+            console.log(error);
         }
-        console.log(request.data);
-        navigate("/home");
-        return request.data;
+    }
+
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        setToken(null);
+        setUserData(null);
+        navigate("/auth");
     }
 
     const data = {
-        userData, setUserData, handleRegister, handleLogin
+        userData, setUserData, token, handleRegister, handleLogin, handleLogout
     }
 
     return (
