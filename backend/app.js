@@ -16,7 +16,14 @@ app.set("port", (process.env.PORT || port));
 
 app.use(cors({
     origin: function (origin, callback) {
-        const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:5173'];
+        // Collect URLs, strip windows carriage returns \r
+        const configuredUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.trim() : null;
+        const allowedOrigins = [
+            configuredUrl, 
+            'http://localhost:5173',
+            'http://localhost:5174'
+        ].filter(Boolean); // remove nulls
+
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
