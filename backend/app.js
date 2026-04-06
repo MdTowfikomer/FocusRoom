@@ -15,21 +15,7 @@ const io = connectToSocket(server);// creates a single server that handle both e
 app.set("port", (process.env.PORT || port));
 
 app.use(cors({
-    origin: function (origin, callback) {
-        // Collect URLs, strip windows carriage returns \r
-        const configuredUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.trim() : null;
-        const allowedOrigins = [
-            configuredUrl, 
-            'http://localhost:5173',
-            'http://localhost:5174'
-        ].filter(Boolean); // remove nulls
-
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
 }));
 app.use(express.json({ limit: "40kb" }));

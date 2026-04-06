@@ -24,8 +24,6 @@ client.interceptors.request.use((config) => {
 
 
 export const AuthProvider = ({children}) => {
-    
-    // const authContext = useContext(AuthContext);
 
     const [userData, setUserData] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token') || null);
@@ -33,16 +31,18 @@ export const AuthProvider = ({children}) => {
 
     const navigate = useNavigate();
     const handleRegister = async (username, email, password) =>{
+        console.log("handleRegister called");
         let request = await client.post('/register', {
             username: username,
             email: email,
             password: password
         })
         if(request.status === httpStatus.CREATED){
-            request.data.message;
+            console.log(request.data.message);
+            // Auto-login the user immediately after successful registration
+            // so they receive a token and don't get kicked out of /home
+            await handleLogin(username, password);
         }
-        console.log(request.data);
-        navigate("/home");
         return request.data;
     }
     const handleLogin = async (username, password)=>{

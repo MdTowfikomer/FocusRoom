@@ -32,7 +32,6 @@ function Authentication() {
     try {
       if (isLogin) {
         let result = await handleLogin(username, password);
-        console.log(result);
         setMessage("Logged in Successfully!");
         setOpen(true);
         setError("");
@@ -45,7 +44,7 @@ function Authentication() {
         setError("");
         toggleAuthMode();
       }
-      console.log("auth done");
+      console.log("auth process done..!");
     } catch (err) {
       console.log(err);
       setError(err?.response?.data?.message);
@@ -175,23 +174,24 @@ function Authentication() {
                 type="submit"
                 className={`auth-btn ${isFormValid ? 'auth-btn-disabled' : ''}`}
                 disabled={isFormValid}
+                onClick={() => console.log("button clicked..!")}
               >
-                {isLogin ? "Next" : "Continue"} 
+                {isLogin ? "Next" : "Continue"}
               </button>
             </form>
 
             <div className="auth-divider">
               {isLogin ? (
-              <>
-                <span>New to FocusRoom?</span>
-                <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign Up Free</a>
-              </>
-            ) : (
-              <>
-                <span>Already have an account?</span>
-                <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign In</a>
-              </>
-            )}
+                <>
+                  <span>New to FocusRoom?</span>
+                  <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign Up Free</a>
+                </>
+              ) : (
+                <>
+                  <span>Already have an account?</span>
+                  <a href="#" onClick={(e) => { e.preventDefault(); toggleAuthMode(); }}>Sign In</a>
+                </>
+              )}
             </div>
 
             <div className="social-login-group">
