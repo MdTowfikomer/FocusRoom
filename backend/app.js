@@ -15,7 +15,14 @@ const io = connectToSocket(server);// creates a single server that handle both e
 app.set("port", (process.env.PORT || port));
 
 app.use(cors({
-    origin: (origin, callback) => callback(null, true),
+    origin: function (origin, callback) {
+        const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:5173'];
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 app.use(express.json({ limit: "40kb" }));

@@ -14,7 +14,7 @@ const login = async (req, res) => {
     const user = await User.findOne({ username }); // fetch user data from the DB using username
 
     if (!user) { // check user exist or not
-        return res.status(httpStatus.NOT_FOUND).json({ message: "USER NOT FOUND!" })
+        return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid credentials" })
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password); // check password is correct or not
@@ -26,7 +26,7 @@ const login = async (req, res) => {
         await user.save(); // save it in DB
         return res.status(httpStatus.OK).json({ token }) 
     } else {
-        return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid password" }); 
+        return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid credentials" }); 
     }
 }
 

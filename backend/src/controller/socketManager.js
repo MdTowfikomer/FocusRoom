@@ -3,7 +3,14 @@ import { Server } from "socket.io";
 export const connectToSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: (origin, callback) => callback(null, true),
+            origin: function (origin, callback) {
+                const allowedOrigins = [process.env.CLIENT_URL || 'http://localhost:5173'];
+                if (!origin || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
+            },
             methods: ["GET", "POST"],
             allowedHeaders: ['*'],
             credentials: true,
@@ -46,7 +53,7 @@ export const connectToSocket = (server) => {
             const [matchingRoom, found] = Object.entries(connections)
                 .reduce(([room, isFound], [roomKey, roomValue]) => { // accumulator, curValue
 
-                    if (!isFound && roomValue.includes(socket.id)) {
+                    if (!isFound && roomValue.some(user => user.id === socket.id)) {
                         return [roomKey, true];
                     }
                     return [room, isFound];
@@ -61,7 +68,7 @@ export const connectToSocket = (server) => {
                 console.log("message", ":", sender, data);
 
                 for (const ele of connections[matchingRoom]) {
-                    io.to(ele).emit("chat-message", data, sender, socket.id)
+                    io.to(ele.id).emit("chat-message", data, sender, socket.id)
                 }
 
             }
@@ -71,24 +78,21 @@ export const connectToSocket = (server) => {
 
             let diffTime = Math.abs(timeOnline[socket.id] - new Date());
 
-            let key;
+            for (const key of Object.keys(connections)) {
+                const index = connections[key].findIndex(user => user.id === socket.id);
 
-            for (const [k, v] of JSON.parse(JSON.stringify(Object.entries(connections)))) {
-                for (let a = 0; a < v.length; ++a) {
-                    if (v[a] === socket.id) {
-                        key = k;
+                if (index !== -1) {
+                    // Send disconnect message to all users in the same room
+                    for (let a = 0; a < connections[key].length; ++a) {
+                        io.to(connections[key][a].id).emit('user-left', socket.id);
+                    }
 
-                        for (let a = 0; a < connections[key].length; ++a) {
-                            io.to(connections[key][a]).emit('user-left', socket.id);
-                        }
+                    // Cleanly remove the disconnected user
+                    connections[key].splice(index, 1);
 
-                        let index = connections[key].indexOf(socket.id);
-
-                        connections[key].splice(index, 1);
-
-                        if (connections[key].length === 0) {
-                            delete connections[key];
-                        }
+                    // Clean the room if it's empty
+                    if (connections[key].length === 0) {
+                        delete connections[key];
                     }
                 }
             }
