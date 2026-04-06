@@ -17,6 +17,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.2",
     "http-status": "^2.1.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.4",
     "socket.io": "^4.8.3"
   }

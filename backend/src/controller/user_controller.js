@@ -1,7 +1,7 @@
 import { User } from "../models/user_model.js";
 import httpStatus from "http-status";
-import bcrypt, { hash } from "bcrypt";
-import crypto from "crypto";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 
 const login = async (req, res) => {
@@ -19,11 +19,13 @@ const login = async (req, res) => {
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password); // check password is correct or not
 
-    if (isPasswordCorrect) {// if correct generate a token
-        let token = crypto.randomBytes(16).toString("hex"); // creating token 
+    if (isPasswordCorrect) { // generate secure stateless JWT token
+        const token = jwt.sign(
+            { id: user._id, username: user.username },
+            process.env.JWT_SECRET || 'fallback_insecure_secret',
+            { expiresIn: '24h' }
+        );
 
-        user.token = token; // assign the token to user
-        await user.save(); // save it in DB
         return res.status(httpStatus.OK).json({ token }) 
     } else {
         return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid credentials" }); 
@@ -34,9 +36,17 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     const { email, username, password } = req.body; // get the crediatials 
 
-    const existngUser = await User.findOne({ username }); // check user exist or not
-    if (existngUser) { // if exist return found..!
-        return res.status(httpStatus.FOUND).json({ message: "User already exists " })
+    if (!email || !username || !password) {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Please provide all required fields" });
+    }
+
+    if (password.length < 8) {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Password must be at least 8 characters long" });
+    }
+
+    const existngUser = await User.findOne({ $or: [{ username }, { email }] }); // check user exists
+    if (existngUser) {
+        return res.status(httpStatus.CONFLICT).json({ message: "Username or email already exists" })
     }
     const hashedPassword = await bcrypt.hash(password, 10); // else hased there password
     const newUser = new User({ // make a user object 
