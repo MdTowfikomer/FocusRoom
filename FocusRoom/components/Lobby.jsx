@@ -34,7 +34,8 @@ const PreviewContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
   width: '100%',
   flex: 1,
-  minHeight: 0,
+  minHeight: 200,
+  maxHeight: '60vh',
   borderRadius: theme.shape.borderRadius * 2.5,
   overflow: 'hidden',
   backgroundColor: theme.palette.mode === 'dark'
@@ -193,8 +194,9 @@ export default function Lobby({
             {videoEnabled && localStream ? (
               <PreviewVideo
                 ref={(el) => {
-                  if (el && localStream) {
+                  if (el && localStream && el.srcObject !== localStream) {
                     el.srcObject = localStream;
+                    el.play().catch(e => console.log('Lobby play error:', e));
                   }
                 }}
                 autoPlay

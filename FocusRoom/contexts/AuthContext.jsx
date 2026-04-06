@@ -7,9 +7,10 @@ import httpStatus from 'http-status';
 const AuthContext = createContext({}); // global context for Authetication 
 
 const client = axios.create({
-    baseURL: "http://localhost:8000/api/v1/users",
-    withCredentials: true,
+    baseURL: `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"}/api/v1/users`,
+    withCredentials: true
 });
+
 
 export const AuthProvider = ({children}) => {
     
@@ -45,7 +46,7 @@ export const AuthProvider = ({children}) => {
                 setUserData({ username }); // Mock user data for now
                 navigate("/home");
             }
-            console.log(request.data);
+            console.log("user successfully logged in! ",request.data);
             return request.data;
         } catch (error) {
             console.log(error);

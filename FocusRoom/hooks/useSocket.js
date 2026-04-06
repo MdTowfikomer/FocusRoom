@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { io } from "socket.io-client";
 
-const server_url = "http://localhost:8000";
+const server_url = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 
 export const useSocket = ()=>{
@@ -61,7 +61,7 @@ export const useSocket = ()=>{
         on,
         off,
         getSocketId,
-        socket: socketRef.current //TODO: improve it
+        socket: socketRef.current
     }
 
 }

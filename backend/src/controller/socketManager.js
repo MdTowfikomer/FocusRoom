@@ -18,17 +18,17 @@ export const connectToSocket = (server) => {
     io.on("connection", (socket) => {
 
         console.log("Socket connected");
-        socket.on("join-call", (path) => {
+        socket.on("join-call", (path, username) => {
             if (connections[path] == undefined) {
                 connections[path] = [];
             }
 
-            connections[path].push(socket.id);
+            connections[path].push({ id: socket.id, username });
 
             timeOnline[socket.id] = new Date();
 
             connections[path].forEach(ele => {
-                io.to(ele).emit("user-joined", socket.id, connections[path]);
+                io.to(ele.id).emit("user-joined", socket.id, connections[path], username);
             });
 
             if (message[path] != undefined) {

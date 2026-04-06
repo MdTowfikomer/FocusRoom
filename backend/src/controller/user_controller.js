@@ -51,4 +51,25 @@ const register = async (req, res) => {
 
 }
 
-export {register, login};
+const getTurnServers = async (req, res) => {
+    try {
+        const apiKey = process.env.METERED_API_KEY;
+        const appName = process.env.METERED_APP_NAME;
+
+        if (!apiKey || !appName) {
+            // Fallback if not configured
+            return res.status(httpStatus.OK).json([{ urls: "stun:stun.l.google.com:19302" }]);
+        }
+
+        const response = await fetch(
+            `https://${appName}.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`
+        );
+        const meteredIceServers = await response.json();
+        return res.status(httpStatus.OK).json(meteredIceServers);
+    } catch (error) {
+        console.error("TURN Fetch Error:", error);
+        return res.status(httpStatus.OK).json([{ urls: "stun:stun.l.google.com:19302" }]);
+    }
+}
+
+export { register, login, getTurnServers };

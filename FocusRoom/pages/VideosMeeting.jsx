@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, Typography,
   IconButton, Drawer, Divider, TextField, Paper, Tooltip, Stack, Chip, useMediaQuery
 } from '@mui/material';
 import {
   Chat as ChatIcon, People, Close, Send,
-  NavigateBefore, InfoOutlined, DarkMode, LightMode
+  NavigateBefore, InfoOutlined, DarkMode, LightMode, ContentCopy, CheckCircle
 } from '@mui/icons-material';
 import { styled, useTheme, alpha } from '@mui/material/styles';
 import { useColorMode } from '../contexts/ColorModeContext';
@@ -31,8 +32,10 @@ const MeetingWrapper = styled(Box)(({ theme }) => ({
 const MainContent = styled(Box)({
   flex: 1,
   display: 'flex',
+  flexDirection: 'column',
   position: 'relative',
   overflow: 'hidden',
+  height: '100%',
 });
 
 // Dynamic Grid System based on N participants and Screen Size
@@ -127,7 +130,7 @@ export default function VideosMeeting() {
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
+  const navigate = useNavigate();
   const {
     localStream,
     remoteVideos,
@@ -139,6 +142,7 @@ export default function VideosMeeting() {
     startMeeting,
     screenSharing,
     toggleScreenShare,
+    leaveMeeting,
     participantCount
   } = useWebRTC();
 
@@ -148,6 +152,8 @@ export default function VideosMeeting() {
   const [askForUsername, setAskForUsername] = useState(true);
   const [username, setUsername] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState("");
   const mediaRequestInProgress = useRef(false);
 
@@ -183,9 +189,16 @@ export default function VideosMeeting() {
     toggleScreenShare();
   }
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
 
   const handleEndCall = () => {
-    window.location.href = "/home";
+    leaveMeeting();
+    navigate("/home");
   }
 
   if (askForUsername) {
@@ -258,7 +271,7 @@ export default function VideosMeeting() {
               {remoteVideos.map((v) => (
                 <VideoTile
                   key={v.id}
-                  username={`${username}`}
+                  username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`}
                   stream={v.stream}
                 />
               ))}
@@ -285,7 +298,7 @@ export default function VideosMeeting() {
               {remoteVideos.map((v) => (
                 <VideoTile
                   key={v.id}
-                  username={`${username}`}
+                  username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`}
                   stream={v.stream}
                 />
               ))}
@@ -296,9 +309,10 @@ export default function VideosMeeting() {
         <ChatDrawer
           anchor={isMobile ? "bottom" : "right"}
           open={showChat}
-          variant="persistent"
+          onClose={() => setShowChat(false)}
+          variant={isMobile ? "temporary" : "persistent"}
           isMobile={isMobile}
-          sx={{ height: isMobile ? '80vh' : 'auto' }}
+          sx={{ '& .MuiDrawer-paper': { height: isMobile ? '100dvh' : '100%' } }}
         >
           <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2 }}>Chats</Typography>
@@ -341,6 +355,73 @@ export default function VideosMeeting() {
             </IconButton>
           </Box>
         </ChatDrawer>
+
+        {/* Share Session Drawer */}
+        <Drawer
+          anchor="bottom"
+          open={showShare}
+          onClose={() => setShowShare(false)}
+          PaperProps={{
+            sx: {
+              borderTopLeftRadius: theme.shape.borderRadius * 3,
+              borderTopRightRadius: theme.shape.borderRadius * 3,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              maxWidth: 600,
+              mx: 'auto',
+              width: '100%',
+              p: 3,
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.5px' }}>
+                Share Session
+              </Typography>
+              <IconButton onClick={() => setShowShare(false)} size="small" sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05) }}>
+                <Close fontSize="small" />
+              </IconButton>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary">
+              Anyone with this link can join the meeting.
+            </Typography>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                mt: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                borderRadius: 2,
+              }}
+            >
+              <TextField
+                fullWidth
+                size="small"
+                value={window.location.href}
+                variant="standard"
+                InputProps={{
+                  disableUnderline: true,
+                  readOnly: true,
+                  sx: { fontSize: '0.85rem', color: 'text.primary', ml: 1, fontFamily: 'Space Mono, monospace' }
+                }}
+              />
+              <IconButton
+                color={copied ? "success" : "primary"}
+                onClick={handleCopyLink}
+                sx={{ flexShrink: 0 }}
+              >
+                {copied ? <CheckCircle /> : <ContentCopy />}
+              </IconButton>
+            </Paper>
+          </Box>
+        </Drawer>
       </MainContent>
 
       <MeetingControls
@@ -361,6 +442,7 @@ export default function VideosMeeting() {
         onEndCall={handleEndCall}
         onToggleChat={() => setShowChat(!showChat)}
         onToggleParticipants={() => { }}
+        onShareSession={() => setShowShare(true)}
       />
     </MeetingWrapper>
   );

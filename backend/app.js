@@ -15,7 +15,7 @@ const io = connectToSocket(server);// creates a single server that handle both e
 app.set("port", (process.env.PORT || port));
 
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
 }));
 app.use(express.json({ limit: "40kb" }));

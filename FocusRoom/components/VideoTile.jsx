@@ -101,7 +101,10 @@ export default function VideoTile({ stream, username, isLocal, isMuted, isVideoO
       {!isVideoOff && stream ? (
         <VideoElement
           ref={(el) => {
-            if (el && stream) el.srcObject = stream;
+            if (el && stream && el.srcObject !== stream) {
+              el.srcObject = stream;
+              el.play().catch(e => console.log('Video tile play error:', e));
+            }
           }}
           autoPlay
           muted={isLocal}

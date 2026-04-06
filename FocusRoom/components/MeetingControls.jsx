@@ -6,7 +6,7 @@ import {
   ScreenShare, StopScreenShare,
   CallEnd,
   Chat, People,
-  MoreVert
+  MoreVert, IosShare
 } from '@mui/icons-material';
 import { styled, alpha, useTheme } from '@mui/material/styles';
 
@@ -28,8 +28,11 @@ const ControlBar = styled(Paper, {
   boxShadow: theme.shadows[10],
   zIndex: 1000,
   transition: 'all 0.3s ease',
-  width: isMobile ? '95%' : 'auto',
-  justifyContent: isMobile ? 'space-between' : 'center',
+  width: 'auto',
+  maxWidth: '95%',
+  justifyContent: 'center',
+  overflowX: 'auto',
+  '&::-webkit-scrollbar': { display: 'none' },
   '&:hover': {
     backgroundColor: alpha(theme.palette.background.paper, 0.95),
   }
@@ -58,7 +61,8 @@ export default function MeetingControls({
   isScreenSharing, onToggleScreenShare,
   onEndCall,
   onToggleChat,
-  onToggleParticipants
+  onToggleParticipants,
+  onShareSession
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -100,6 +104,12 @@ export default function MeetingControls({
           </ActionButton>
         </Tooltip>
       )}
+
+      <Tooltip title="Share Session">
+        <ActionButton onClick={onShareSession} isMobile={isMobile}>
+          <IosShare />
+        </ActionButton>
+      </Tooltip>
 
       <Tooltip title="More Options">
         <ActionButton isMobile={isMobile}>

@@ -1,52 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
-    Box, Typography, Container, Grid, Paper, TextField, Button,
-    IconButton, Stack, Chip, Divider, useMediaQuery, Fade
+    Box, Typography, Container, Paper, TextField, Button,
+    IconButton, Stack, Chip, Divider, useMediaQuery, Fade,
+    List, ListItem, ListItemButton, ListItemIcon, ListItemText, Drawer,
+    Avatar, InputAdornment
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import {
     VideoCall, Keyboard, Schedule, History,
-    Settings, Logout, DarkMode, LightMode, ArrowForward
+    Settings, Logout, DarkMode, LightMode, ArrowForward,
+    EventNote, Videocam, Search, Menu as MenuIcon, Phone
 } from '@mui/icons-material';
 import { styled, useTheme, alpha } from '@mui/material/styles';
 import { useColorMode } from '../contexts/ColorModeContext';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../contexts/AuthContext';
-import { useContext } from 'react';
 
 /* ─── Styled Components ─── */
 
 const DashboardWrapper = styled(Box)(({ theme }) => ({
-    minHeight: '100vh',
+    height: '100vh',
     backgroundColor: theme.palette.background.default,
     color: theme.palette.text.primary,
     display: 'flex',
     flexDirection: 'column',
     transition: 'all 0.3s ease',
-}));
-
-const GlassCard = styled(Paper)(({ theme }) => ({
-    backgroundColor: alpha(theme.palette.background.paper, 0.05),
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    borderRadius: theme.spacing(3),
-    padding: theme.spacing(4),
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    '&:hover': {
-        backgroundColor: alpha(theme.palette.background.paper, 0.08),
-        borderColor: alpha(theme.palette.primary.main, 0.3),
-        transform: 'translateY(-4px)',
-        boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.4)}`,
-    },
+    overflow: 'hidden'
 }));
 
 const NexusTile = styled(Box, {
     shouldForwardProp: (prop) => prop !== 'active',
 })(({ theme, active, color }) => ({
-    flex: 1,
     padding: theme.spacing(4),
     borderRadius: theme.spacing(3),
-    backgroundColor: alpha(color || theme.palette.primary.main, active ? 0.15 : 0.05),
-    border: `1px solid ${alpha(color || theme.palette.primary.main, active ? 0.4 : 0.1)}`,
+    bgcolor: 'rgba(59,130,246,0.10)',
+    border: '1px solid rgba(59,130,246,0.2)',
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(2),
@@ -54,17 +42,10 @@ const NexusTile = styled(Box, {
     transition: 'all 0.3s ease',
     position: 'relative',
     overflow: 'hidden',
+    height: '100%',
     '&:hover': {
         backgroundColor: alpha(color || theme.palette.primary.main, 0.2),
         borderColor: alpha(color || theme.palette.primary.main, 0.6),
-        '& .tile-icon': {
-            transform: 'scale(1.1) rotate(-5deg)',
-            color: color || theme.palette.primary.main,
-        },
-        '& .tile-arrow': {
-            transform: 'translateX(4px)',
-            opacity: 1,
-        }
     },
 }));
 
@@ -80,19 +61,6 @@ const TileIconBox = styled(Box)(({ theme, color }) => ({
     transition: 'all 0.3s ease',
 }));
 
-const SidePanel = styled(Box)(({ theme }) => ({
-    borderLeft: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    height: '100%',
-    padding: theme.spacing(4),
-    backgroundColor: alpha(theme.palette.background.paper, 0.02),
-    [theme.breakpoints.down('md')]: {
-        borderLeft: 'none',
-        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    },
-}));
-
-/* ─── Component ─── */
-
 export default function Home() {
     const theme = useTheme();
     const { toggleColorMode } = useColorMode();
@@ -102,6 +70,8 @@ export default function Home() {
 
     const [joinCode, setJoinCode] = useState("");
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [activeTab, setActiveTab] = useState('meetings');
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     useEffect(() => {
         if (!token) {
@@ -126,203 +96,270 @@ export default function Home() {
     };
 
     const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    const formattedDate = currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+    const formattedDate = currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
+    const SidebarContent = (
+        <Box sx={{ width: 240, pt: 2 }}>
+            <List>
+                <ListItem disablePadding>
+                    <ListItemButton
+                        selected={activeTab === 'meetings'}
+                        onClick={() => { setActiveTab('meetings'); if (isMobile) setDrawerOpen(false); }}
+                        sx={{
+                            borderRadius: '0 24px 24px 0', mr: 2, mb: 1,
+                            bgcolor: activeTab === 'meetings' ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                            color: activeTab === 'meetings' ? 'primary.main' : 'text.primary'
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: 'inherit' }}>
+                            <Videocam />
+                        </ListItemIcon>
+                        <ListItemText primary="Meetings" slotProps={{ primary: { sx: { fontWeight: 600 } } }} />
+                    </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                    <ListItemButton
+                        selected={activeTab === 'calls'}
+                        onClick={() => { setActiveTab('calls'); if (isMobile) setDrawerOpen(false); }}
+                        sx={{
+                            borderRadius: '0 24px 24px 0', mr: 2,
+                            bgcolor: activeTab === 'calls' ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                            color: activeTab === 'calls' ? 'primary.main' : 'text.primary'
+                        }}
+                    >
+                        <ListItemIcon sx={{ color: 'inherit' }}>
+                            <Phone />
+                        </ListItemIcon>
+                        <ListItemText primary="Calls" slotProps={{ primary: { sx: { fontWeight: 600 } } }} />
+                    </ListItemButton>
+                </ListItem>
+            </List>
+        </Box>
+    );
+
+    const MeetingsView = () => (
+        // <Fade in timeout={600}>
+        <Container maxWidth="md" sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: isMobile ? 4 : 8, pb: 4 }}>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <Typography variant={isMobile ? "h4" : "h3"} textAlign="center" sx={{ fontWeight: 400, mb: 2 }}>
+                    Video calls and meetings for everyone
+                </Typography>
+                <Typography variant="h6" textAlign="center" color="text.secondary" sx={{ fontWeight: 400, mb: 6 }}>
+                    Connect, collaborate and celebrate from anywhere with FocusRoom
+                </Typography>
+
+                <Grid container spacing={3} sx={{ justifyContent: 'center' }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <NexusTile color={theme.palette.primary.main} onClick={handleStartMeeting}>
+                            <TileIconBox color={theme.palette.primary.main} className="tile-icon">
+                                <VideoCall sx={{ fontSize: 32 }} />
+                            </TileIconBox>
+                            <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>New Meeting</Typography>
+                                <Typography variant="body2" color="text.secondary">Create an instant room and invite others</Typography>
+                            </Box>
+                        </NexusTile>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <NexusTile color={theme.palette.primary.main} active={joinCode.length > 0}>
+                            <TileIconBox color={theme.palette.primary.main} className="tile-icon">
+                                <Keyboard sx={{ fontSize: 32 }} />
+                            </TileIconBox>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Join Session</Typography>
+                                <Stack direction={isMobile ? "column" : "row"} spacing={1} sx={{ mt: 'auto', pt: 2 }}>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        placeholder="Enter room ID or link"
+                                        value={joinCode}
+                                        onChange={(e) => setJoinCode(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleJoinMeeting()}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                bgcolor: alpha(theme.palette.background.paper, 0.8),
+                                                borderRadius: 1.5
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        disabled={!joinCode.trim()}
+                                        onClick={handleJoinMeeting}
+                                        sx={{ borderRadius: 1.5, px: 3, whiteSpace: 'nowrap' }}
+                                        color="primary"
+                                    >
+                                        Join
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        </NexusTile>
+                    </Grid>
+                </Grid>
+            </Box>
+
+
+        </Container>
+        // </Fade>
+    );
+
+    const CallsView = () => (
+        <Container maxWidth="md" sx={{ pt: isMobile ? 2 : 4, pb: 4, height: '100%', overflowY: 'auto' }}>
+            <Box sx={{ mb: 4, px: isMobile ? 0 : 2 }}>
+                <TextField
+                    fullWidth
+                    placeholder="Search contacts or dial a number"
+                    variant="outlined"
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Search color="action" />
+                            </InputAdornment>
+                        ),
+                        sx: {
+                            borderRadius: '24px',
+                            bgcolor: alpha(theme.palette.background.paper, 0.6),
+                            '& fieldset': { border: 'none' },
+                            boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.1)}`,
+                            transition: 'all 0.2s',
+                            '&:focus-within': {
+                                boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.15)}`,
+                                bgcolor: 'background.paper',
+                            }
+                        }
+                    }}
+                />
+            </Box>
+
+            <Box sx={{ px: isMobile ? 0 : 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 2, ml: 1 }}>
+                    History
+                </Typography>
+
+                <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden', border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                    <List disablePadding>
+                        {[1, 2, 3].map((item, index) => (
+                            <React.Fragment key={item}>
+                                <ListItem
+                                    sx={{
+                                        py: 2,
+                                        '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.5) },
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <ListItemIcon>
+                                        <Avatar sx={{ bgcolor: theme.palette.primary.light }}>
+                                            RM
+                                        </Avatar>
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={`ROOM_X${item}`}
+                                        slotProps={{ primary: { sx: { fontWeight: 500, fontFamily: 'Space Mono, monospace' } } }}
+                                        secondary={<Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                            <History sx={{ fontSize: 14 }} color="action" />
+                                            <span>Session • 2 hours ago</span>
+                                        </Box>}
+                                    />
+                                    <IconButton size="small" edge="end">
+                                        <Phone fontSize="small" />
+                                    </IconButton>
+                                </ListItem>
+                                {index < 2 && <Divider variant="inset" component="li" />}
+                            </React.Fragment>
+                        ))}
+                    </List>
+                </Paper>
+            </Box>
+        </Container>
+    );
 
     return (
         <DashboardWrapper>
             {/* ── Header ── */}
-            <Container maxWidth="xl">
-                <Box sx={{ py: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Typography variant="h2" sx={{
-                            fontSize: '1.75rem',
-                            fontWeight: 800,
-                            letterSpacing: '-0.5px',
-                            background: theme.palette.mode === 'dark' ?
-                                'linear-gradient(135deg, #fff 0%, #60A5FA 100%)' :
-                                'linear-gradient(135deg, #2563EB 0%, #a1b2e7ff 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            font: "'Plus Jakarta Sans', 'Inter', 'sans-serif'",
-                            textTransform: "none",
-                        }}>
-                            FocusRoom
-                        </Typography>
-                    </Stack>
-
-                    <Stack direction="row" spacing={2} alignItems="center">
-                        <IconButton onClick={toggleColorMode} sx={{ border: 1, borderColor: alpha(theme.palette.divider, 0.1) }}>
-                            {theme.palette.mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+            <Box sx={{
+                px: { xs: 2, md: 3 },
+                py: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+            }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                    {isMobile && (
+                        <IconButton onClick={() => setDrawerOpen(true)} edge="start" color="inherit">
+                            <MenuIcon />
                         </IconButton>
-                        <Chip
-                            icon={<Settings fontSize="small" />}
-                            label="SETTINGS"
-                            variant="outlined"
-                            onClick={() => { }}
-                            sx={{ borderRadius: 1, fontFamily: 'Space Mono, monospace', fontWeight: 700 }}
-                        />
-                        <IconButton color="error" size="small" onClick={handleLogout}>
-                            <Logout fontSize="small" />
-                        </IconButton>
-                    </Stack>
-                </Box>
-            </Container>
+                    )}
+                    <Typography variant="h5" sx={{
+                        fontWeight: 800,
+                        letterSpacing: '-0.5px',
+                        background: theme.palette.mode === 'dark' ?
+                            'linear-gradient(135deg, #fff 0%, #60A5FA 100%)' :
+                            'linear-gradient(135deg, #2563EB 0%, #a1b2e7ff 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        font: "'Plus Jakarta Sans', 'Inter', 'sans-serif'",
+                    }}>
+                        FocusRoom
+                    </Typography>
+                </Stack>
 
-            {/* ── Main Hero ── */}
-            <Container maxWidth="xl" sx={{ flex: 1, display: 'flex', alignItems: 'center', py: 4 }}>
-                <Grid container spacing={6} alignItems="stretch">
+                <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
+                    <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mr: 2 }}>
+                        {formattedTime} • {formattedDate}
+                    </Typography>
 
-                    <Grid item xs={12} md={8}>
-                        <Fade in timeout={800}>
-                            <Box>
-                                <Typography variant="overline" color="primary" sx={{ fontWeight: 800, letterSpacing: 4, mb: 1, display: 'block' }}>
-                                    SYSTEM_INITIALIZED // WELCOME_BACK {userData?.username?.toUpperCase()}
-                                </Typography>
-                                <Typography variant={isMobile ? "h3" : "h1"} sx={{ fontWeight: 800, mb: 2, letterSpacing: -2 }}>
-                                    Ready to connect?
-                                </Typography>
-
-                                <Stack direction={isMobile ? "column" : "row"} spacing={2} sx={{ mb: 6 }}>
-                                    <Typography variant="h4" sx={{ opacity: 0.5, fontWeight: 300 }}>
-                                        {formattedDate}
-                                    </Typography>
-                                    <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main' }}>
-                                        {formattedTime}
-                                    </Typography>
-                                </Stack>
-
-                                {/* ── Quick Action Nexus ── */}
-                                <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 3 }}>
-
-                                    <NexusTile color={theme.palette.warning.main} onClick={handleStartMeeting}>
-                                        <TileIconBox color={theme.palette.warning.main} className="tile-icon">
-                                            <VideoCall sx={{ fontSize: 32 }} />
-                                        </TileIconBox>
-                                        <Box>
-                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>New Meeting</Typography>
-                                            <Typography variant="body2" color="text.secondary">Create an instant room and invite others</Typography>
-                                        </Box>
-                                        <ArrowForward className="tile-arrow" sx={{ position: 'absolute', right: 24, bottom: 24, opacity: 0, transition: '0.3s' }} />
-                                    </NexusTile>
-
-                                    <NexusTile color={theme.palette.primary.main} active={joinCode.length > 0}>
-                                        <TileIconBox color={theme.palette.primary.main} className="tile-icon">
-                                            <Keyboard sx={{ fontSize: 32 }} />
-                                        </TileIconBox>
-                                        <Box>
-                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Join Session</Typography>
-                                            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                                                <TextField
-                                                    fullWidth
-                                                    size="small"
-                                                    placeholder="Enter room ID..."
-                                                    value={joinCode}
-                                                    onChange={(e) => setJoinCode(e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleJoinMeeting()}
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': {
-                                                            bgcolor: alpha(theme.palette.common.black, 0.2),
-                                                            fontFamily: 'Space Mono, monospace',
-                                                            borderRadius: 1.5
-                                                        }
-                                                    }}
-                                                />
-                                                <Button
-                                                    variant="contained"
-                                                    disabled={!joinCode.trim()}
-                                                    onClick={handleJoinMeeting}
-                                                    sx={{ borderRadius: 1.5, px: 3 }}
-                                                >
-                                                    Join
-                                                </Button>
-                                            </Stack>
-                                        </Box>
-                                    </NexusTile>
-
-                                    <NexusTile color={theme.palette.text.secondary}>
-                                        <TileIconBox color={theme.palette.text.secondary} className="tile-icon">
-                                            <Schedule sx={{ fontSize: 32 }} />
-                                        </TileIconBox>
-                                        <Box>
-                                            <Typography variant="h6" sx={{ fontWeight: 800 }}>Schedule</Typography>
-                                            <Typography variant="body2" color="text.secondary">Plan a future focus session</Typography>
-                                        </Box>
-                                        <Chip label="SOON" size="small" sx={{ position: 'absolute', top: 16, right: 16, fontSize: '0.6rem', fontWeight: 900 }} />
-                                    </NexusTile>
-
-                                </Box>
-                            </Box>
-                        </Fade>
-                    </Grid>
-
-                    {/* ── Side Activity Panel ── */}
-                    <Grid item xs={12} md={4}>
-                        <Fade in timeout={1200}>
-                            <Box sx={{ height: '100%' }}>
-                                <GlassCard sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2, mb: 3, display: 'block' }}>
-                                        RECENT_SESSIONS
-                                    </Typography>
-
-                                    <Stack spacing={2} sx={{ flex: 1, overflowY: 'auto' }}>
-                                        {[1, 2, 3].map((item) => (
-                                            <Box
-                                                key={item}
-                                                sx={{
-                                                    p: 2,
-                                                    borderRadius: 2,
-                                                    border: 1,
-                                                    borderColor: alpha(theme.palette.divider, 0.1),
-                                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05), borderColor: alpha(theme.palette.primary.main, 0.2) },
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                    <Box>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontFamily: 'Space Mono, monospace' }}>ROOM_X{item}</Typography>
-                                                        <Typography variant="caption" color="text.secondary">Last active: 2 hours ago</Typography>
-                                                    </Box>
-                                                    <History fontSize="small" sx={{ opacity: 0.3 }} />
-                                                </Stack>
-                                            </Box>
-                                        ))}
-                                    </Stack>
-
-                                    <Divider sx={{ my: 3, borderColor: alpha(theme.palette.divider, 0.1) }} />
-
-                                    <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.05), borderRadius: 2, border: '1px dashed', borderColor: alpha(theme.palette.success.main, 0.2) }}>
-                                        <Stack direction="row" spacing={2} alignItems="center">
-                                            <Box sx={{ width: 8, height: 8, bgcolor: 'success.main', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-                                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.main', fontFamily: 'Space Mono, monospace' }}>
-                                                NETWORK_STATUS: OPTIMAL
-                                            </Typography>
-                                        </Stack>
-                                    </Box>
-                                </GlassCard>
-                            </Box>
-                        </Fade>
-                    </Grid>
-
-                </Grid>
-            </Container>
-
-            {/* ── Footer Metadata ── */}
-            <Box sx={{ py: 4, textAlign: 'center', opacity: 0.3 }}>
-                <Typography variant="caption" sx={{ fontFamily: 'Space Mono, monospace', letterSpacing: 2 }}>
-                    FOCUS_ROOM_OS_V0.1.0_STABLE
-                </Typography>
+                    <IconButton size={isMobile ? "small" : "medium"} onClick={toggleColorMode}>
+                        {theme.palette.mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+                    </IconButton>
+                    <IconButton size={isMobile ? "small" : "medium"} onClick={() => { }}>
+                        <Settings fontSize="small" />
+                    </IconButton>
+                    <Avatar
+                        sx={{
+                            width: { xs: 32, sm: 36 },
+                            height: { xs: 32, sm: 36 },
+                            bgcolor: theme.palette.secondary.main,
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            ml: 1
+                        }}
+                        onClick={handleLogout}
+                    >
+                        {userData?.username ? userData.username.charAt(0).toUpperCase() : 'U'}
+                    </Avatar>
+                </Stack>
             </Box>
 
-            <style>
-                {`
-          @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-          }
-        `}
-            </style>
+            {/* ── Main Layout Area ── */}
+            <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                {/* ── Sidebar (Desktop) ── */}
+                {!isMobile && (
+                    <Box sx={{ borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`, flexShrink: 0 }}>
+                        {SidebarContent}
+                    </Box>
+                )}
+
+                {/* ── Sidebar (Mobile Temporary Drawer) ── */}
+                <Drawer
+                    anchor="left"
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    slotProps={{ paper: { sx: { width: 280, bgcolor: 'background.default' } } }}
+                >
+                    <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <Typography variant="h6" sx={{ fontWeight: 800 }}>FocusRoom</Typography>
+                    </Box>
+                    {SidebarContent}
+                </Drawer>
+
+                {/* ── Content View ── */}
+                <Box sx={{ flex: 1 }}>
+                    {activeTab === 'meetings' ? MeetingsView() : CallsView()}
+                </Box>
+            </Box>
         </DashboardWrapper>
     );
 }
