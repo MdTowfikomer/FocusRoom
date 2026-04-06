@@ -1,8 +1,14 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { io } from "socket.io-client";
 
-const server_url = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+export const getBackendUrl = () => {
+    if (import.meta.env.VITE_BACKEND_URL) return import.meta.env.VITE_BACKEND_URL;
+    if (window.location.hostname === 'localhost') return "http://localhost:8000";
+    if (window.location.hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/)) return `http://${window.location.hostname}:8000`;
+    return "https://focusroom-1.onrender.com";
+};
 
+export const server_url = getBackendUrl();
 
 export const useSocket = ()=>{
     const socketRef = useRef();

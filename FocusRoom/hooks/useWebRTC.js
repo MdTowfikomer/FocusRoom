@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSocket } from './useSocket';
+import { useSocket, server_url } from './useSocket';
 
 
 export const useWebRTC = () => {
@@ -47,9 +47,27 @@ export const useWebRTC = () => {
                     await pc.setLocalDescription();
                     emit("signal", fromId, JSON.stringify({ sdp: pc.localDescription }));
                 }
+
+                // Process queued ICE candidates
+                if (connection.iceCandidateQueue && connection.iceCandidateQueue.length > 0) {
+                    for (const candidate of connection.iceCandidateQueue) {
+                        try {
+                            await pc.addIceCandidate(candidate);
+                        } catch (err) {
+                            console.error("Error adding queued candidate", err);
+                        }
+                    }
+                    connection.iceCandidateQueue = [];
+                }
             } else if (signal.iceCandidate) {
                 try {
-                    await pc.addIceCandidate(new RTCIceCandidate(signal.iceCandidate));
+                    const candidate = new RTCIceCandidate(signal.iceCandidate);
+                    if (pc.remoteDescription) {
+                        await pc.addIceCandidate(candidate);
+                    } else {
+                        if (!connection.iceCandidateQueue) connection.iceCandidateQueue = [];
+                        connection.iceCandidateQueue.push(candidate);
+                    }
                 } catch (err) {
                     if (!connection.ignoreOffer) throw err;
                 }
@@ -67,7 +85,8 @@ export const useWebRTC = () => {
             pc,
             isPolite,
             makingOffer: false,
-            ignoreOffer: false
+            ignoreOffer: false,
+            iceCandidateQueue: []
         };
 
         pc.onicecandidate = ((event) => {
@@ -195,10 +214,10 @@ export const useWebRTC = () => {
 
             // Fetch TURN servers from backend
             try {
-                const apiBase = `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"}/api/v1/users`;
+                const apiBase = `${server_url}/api/v1/users`;
                 const response = await fetch(`${apiBase}/get_turn_servers`);
                 const meteredIceServers = await response.json();
-                iceServersRef.current = meteredIceServers;
+                iceServersRef.current = meteredIceServers.slice(0, 4);
                 console.log("TURN Servers Loaded");
             } catch (err) {
                 console.warn("Could not fetch TURN servers, using basic STUN", err);
