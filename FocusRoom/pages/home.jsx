@@ -16,6 +16,7 @@ import { useColorMode } from '../contexts/ColorModeContext';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../contexts/AuthContext';
 
+
 /* ─── Styled Components ─── */
 
 const DashboardWrapper = styled(Box)(({ theme }) => ({
@@ -238,7 +239,7 @@ export default function Home() {
 
                 <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden', border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
                     <List disablePadding>
-                        {[1, 2, 3].map((item, index) => (
+                        {[1, 2, 3].map((item, index) => ( // TODO: Session time
                             <React.Fragment key={item}>
                                 <ListItem
                                     sx={{

@@ -8,7 +8,7 @@ export const getBackendUrl = () => {
     return "https://focusroom-1.onrender.com";
 };
 
-export const server_url = getBackendUrl();
+export const server_url = "http://localhost:8000"
 
 export const useSocket = ()=>{
     const socketRef = useRef();

@@ -16,4 +16,4 @@ router.route("/get_turn_servers").get(getTurnServers);
 router.route("/add_to_activity");
 router.route("/get_to_activity");
 
-export default router;  
+export default router;   

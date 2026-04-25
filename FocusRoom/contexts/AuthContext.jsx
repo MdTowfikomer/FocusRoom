@@ -7,7 +7,7 @@ import httpStatus from 'http-status';
 const AuthContext = createContext({}); // global context for Authetication 
 
 const client = axios.create({
-    baseURL: `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"}/api/v1/users`,
+    baseURL: "http://localhost:8000/api/v1/users",  
     withCredentials: true
 });
 

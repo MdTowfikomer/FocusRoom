@@ -9,6 +9,7 @@ import {
   MoreVert, IosShare
 } from '@mui/icons-material';
 import { styled, alpha, useTheme } from '@mui/material/styles';
+import { useMeeting } from '../contexts/MeetingContext';
 
 const ControlBar = styled(Paper, {
   shouldForwardProp: (prop) => prop !== 'isMobile',
@@ -55,36 +56,35 @@ const ActionButton = styled(IconButton, {
   }
 }));
 
-export default function MeetingControls({
-  isMuted, onToggleMute,
-  isVideoOff, onToggleVideo,
-  isScreenSharing, onToggleScreenShare,
-  onEndCall,
-  onToggleChat,
-  onToggleParticipants,
-  onShareSession
-}) {
+export default function MeetingControls({ onEndCall }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const {
+      audioEnabled, setAudioEnabled,
+      videoEnabled, setVideoEnabled,
+      screenSharing, toggleScreenShare,
+      showChat, setShowChat,
+      setShowShare
+  } = useMeeting();
 
   return (
     <ControlBar elevation={0} isMobile={isMobile}>
-      <Tooltip title={isMuted ? "Unmute" : "Mute"}>
-        <ActionButton onClick={onToggleMute} color={isMuted ? "error" : "default"} isMobile={isMobile}>
-          {isMuted ? <MicOff /> : <Mic />}
+      <Tooltip title={!audioEnabled ? "Unmute" : "Mute"}>
+        <ActionButton onClick={() => setAudioEnabled(!audioEnabled)} color={!audioEnabled ? "error" : "default"} isMobile={isMobile}>
+          {!audioEnabled ? <MicOff /> : <Mic />}
         </ActionButton>
       </Tooltip>
 
-      <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
-        <ActionButton onClick={onToggleVideo} color={isVideoOff ? "error" : "default"} isMobile={isMobile}>
-          {isVideoOff ? <VideocamOff /> : <Videocam />}
+      <Tooltip title={!videoEnabled ? "Start Video" : "Stop Video"}>
+        <ActionButton onClick={() => setVideoEnabled(!videoEnabled)} color={!videoEnabled ? "error" : "default"} isMobile={isMobile}>
+          {!videoEnabled ? <VideocamOff /> : <Videocam />}
         </ActionButton>
       </Tooltip>
 
       {!isMobile && (
-        <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
-          <ActionButton onClick={onToggleScreenShare} color={isScreenSharing ? "primary" : "default"} isMobile={isMobile}>
-            {isScreenSharing ? <StopScreenShare /> : <ScreenShare />}
+        <Tooltip title={screenSharing ? "Stop Sharing" : "Share Screen"}>
+          <ActionButton onClick={toggleScreenShare} color={screenSharing ? "primary" : "default"} isMobile={isMobile}>
+            {screenSharing ? <StopScreenShare /> : <ScreenShare />}
           </ActionButton>
         </Tooltip>
       )}
@@ -92,21 +92,21 @@ export default function MeetingControls({
       <Box sx={{ width: 1, height: 24, mx: isMobile ? 0.5 : 1, borderLeft: '1px solid', borderColor: alpha(theme.palette.divider, 0.1) }} />
 
       <Tooltip title="Chat">
-        <ActionButton onClick={onToggleChat} isMobile={isMobile}>
+        <ActionButton onClick={() => setShowChat(!showChat)} isMobile={isMobile}>
           <Chat />
         </ActionButton>
       </Tooltip>
 
       {!isMobile && (
         <Tooltip title="Participants">
-          <ActionButton onClick={onToggleParticipants} isMobile={isMobile}>
+          <ActionButton isMobile={isMobile}>
             <People />
           </ActionButton>
         </Tooltip>
       )}
 
       <Tooltip title="Share Session">
-        <ActionButton onClick={onShareSession} isMobile={isMobile}>
+        <ActionButton onClick={() => setShowShare(true)} isMobile={isMobile}>
           <IosShare />
         </ActionButton>
       </Tooltip>

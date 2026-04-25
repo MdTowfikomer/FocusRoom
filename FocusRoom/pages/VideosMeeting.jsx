@@ -1,24 +1,21 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, Typography,
-  IconButton, Drawer, Divider, TextField, Paper, Tooltip, Stack, Chip, useMediaQuery
+  IconButton, Stack, Chip, useMediaQuery
 } from '@mui/material';
 import {
-  Chat as ChatIcon, People, Close, Send,
-  NavigateBefore, InfoOutlined, DarkMode, LightMode, ContentCopy, CheckCircle
+  DarkMode, LightMode
 } from '@mui/icons-material';
 import { styled, useTheme, alpha } from '@mui/material/styles';
 import { useColorMode } from '../contexts/ColorModeContext';
-
-import { useWebRTC } from '../hooks/useWebRTC';
+import { MeetingProvider, useMeeting } from '../contexts/MeetingContext';
 
 import Lobby from '../components/Lobby';
 import VideoTile from '../components/VideoTile';
 import MeetingControls from '../components/MeetingControls';
-
-
-
+import ChatDrawer from '../components/ChatDrawer';
+import ShareDrawer from '../components/ShareDrawer';
 
 const MeetingWrapper = styled(Box)(({ theme }) => ({
   height: '100vh',
@@ -38,7 +35,6 @@ const MainContent = styled(Box)({
   height: '100%',
 });
 
-// Dynamic Grid System based on N participants and Screen Size
 const DynamicGrid = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'count' && prop !== 'isMobile',
 })(({ theme, count, isMobile }) => {
@@ -53,47 +49,15 @@ const DynamicGrid = styled(Box, {
     width: '100%',
   };
 
-  // Solo Layout
-  if (count <= 1) {
-    return {
-      ...common,
-      gridTemplateColumns: '1fr',
-      gridTemplateRows: '1fr',
-      maxWidth: isMobile ? '100%' : '1200px',
-      margin: '0 auto',
-    };
-  }
-
-  // Dual Layout (PIP)
-  if (count === 2) {
-    return {
-      ...common,
-      gridTemplateColumns: '1fr',
-      gridTemplateRows: '1fr',
-      padding: 0,
-    };
-  }
-
-  // Trio Layout (Pyramid)
-  if (count === 3) {
-    return {
+  if (count <= 1) return { ...common, gridTemplateColumns: '1fr', gridTemplateRows: '1fr', maxWidth: isMobile ? '100%' : '1200px', margin: '0 auto' };
+  if (count === 2) return { ...common, gridTemplateColumns: '1fr', gridTemplateRows: '1fr', padding: 0 };
+  if (count === 3) return {
       ...common,
       gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
       gridTemplateRows: isMobile ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-      '& > div:last-child': {
-        gridColumn: isMobile ? 'span 1' : 'span 2',
-        justifySelf: 'center',
-        width: isMobile ? '100%' : 'calc(50% - 8px)',
-      }
-    };
-  }
-
-  // Quad Layout (2x2)
-  return {
-    ...common,
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gridTemplateRows: 'repeat(2, 1fr)',
+      '& > div:last-child': { gridColumn: isMobile ? 'span 1' : 'span 2', justifySelf: 'center', width: isMobile ? '100%' : 'calc(50% - 8px)' }
   };
+  return { ...common, gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: 'repeat(2, 1fr)' };
 });
 
 const PIPContainer = styled(Box, {
@@ -106,111 +70,36 @@ const PIPContainer = styled(Box, {
   height: isMobile ? '180px' : '180px',
   zIndex: 10,
   transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'scale(1.05)',
-  },
+  '&:hover': { transform: 'scale(1.05)' },
 }));
 
-const ChatDrawer = styled(Drawer, {
-  shouldForwardProp: (prop) => prop !== 'isMobile',
-})(({ theme, isMobile }) => ({
-  width: isMobile ? '100%' : 360,
-  flexShrink: 0,
-  '& .MuiDrawer-paper': {
-    width: isMobile ? '100%' : 360,
-    boxSizing: 'border-box',
-    borderLeft: isMobile ? 'none' : `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-    backgroundColor: alpha(theme.palette.background.paper, 0.9),
-    backdropFilter: 'blur(20px)',
-  },
-}));
-
-export default function VideosMeeting() {
-
+function MeetingRoom() {
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
-  const {
-    localStream,
-    remoteVideos,
-    messages,
-    sendMessage: sendChatMessage,
-    toggleAudio,
-    toggleVideo,
-    getMedia,
-    startMeeting,
-    screenSharing,
-    toggleScreenShare,
-    leaveMeeting,
-    participantCount
-  } = useWebRTC();
 
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const {
+    localStream, remoteVideos, participantCount,
+    videoEnabled, audioEnabled,
+    startMeeting, leaveMeeting
+  } = useMeeting();
 
   const [askForUsername, setAskForUsername] = useState(true);
   const [username, setUsername] = useState("");
-  const [showChat, setShowChat] = useState(false);
-  const [showShare, setShowShare] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [message, setMessage] = useState("");
-  const mediaRequestInProgress = useRef(false);
-
-  useEffect(() => {
-    if (askForUsername && !localStream) {
-      getMedia();
-    }
-  }, [askForUsername, localStream, getMedia]);
-
-
-
-  useEffect(() => {
-    if (!localStream) return;
-    localStream.getVideoTracks().forEach(track => track.enabled = videoEnabled);
-    localStream.getAudioTracks().forEach(track => track.enabled = audioEnabled);
-  }, [localStream, videoEnabled, audioEnabled]);
-
-  // Action Handlers
 
   const handleJoin = () => {
     setAskForUsername(false);
     startMeeting(username);
-  }
-
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      sendChatMessage(username, message);
-      setMessage("");
-    }
-  }
-
-  const handleScreen = () => {
-    toggleScreenShare();
-  }
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
-
 
   const handleEndCall = () => {
     leaveMeeting();
     navigate("/home");
-  }
+  };
 
   if (askForUsername) {
-    return (
-      <Lobby
-        username={username} setUsername={setUsername}
-        videoEnabled={videoEnabled} setVideoEnabled={setVideoEnabled}
-        audioEnabled={audioEnabled} setAudioEnabled={setAudioEnabled}
-        onJoin={handleJoin}
-        localStream={localStream}
-      />
-    );
+    return <Lobby username={username} setUsername={setUsername} onJoin={handleJoin} />;
   }
 
   return (
@@ -218,35 +107,11 @@ export default function VideosMeeting() {
       <AppBar position="static" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: alpha(theme.palette.divider, 0.1) }}>
         <Toolbar variant="dense">
           <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
-            <Box sx={{ 
-              width: 24, 
-              height: 24, 
-              bgcolor: 'primary.main', 
-              borderRadius: 0.5,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: (theme) => `0 0 15px ${alpha(theme.palette.primary.main, 0.3)}`
-            }}>
+            <Box sx={{ width: 24, height: 24, bgcolor: 'primary.main', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: (theme) => `0 0 15px ${alpha(theme.palette.primary.main, 0.3)}` }}>
               <Box sx={{ width: 8, height: 8, bgcolor: 'white', borderRadius: '50%' }} />
             </Box>
-            <Typography variant="h6" sx={{ 
-              color: 'text.primary', 
-              fontWeight: 800, 
-              fontFamily: '"Plus Jakarta Sans", sans-serif', 
-              fontSize: isMobile ? '0.9rem' : '1.1rem', 
-              letterSpacing: -0.5,
-              textTransform: 'none'
-            }}>
+            <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 800, fontFamily: '"Plus Jakarta Sans", sans-serif', fontSize: isMobile ? '0.9rem' : '1.1rem', letterSpacing: -0.5, textTransform: 'none' }}>
               FocusRoom
-            </Typography>
-            <Typography variant="caption" sx={{ 
-              opacity: 0.4, 
-              fontFamily: '"Space Mono", monospace', 
-              ml: 2,
-              display: isMobile ? 'none' : 'block'
-            }}>
-              // SESSION_{window.location.pathname.split('/').pop()?.substring(0, 4).toUpperCase()}
             </Typography>
           </Stack>
           <Stack direction="row" spacing={isMobile ? 1 : 2} alignItems="center">
@@ -254,11 +119,7 @@ export default function VideosMeeting() {
               {theme.palette.mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
             </IconButton>
             {!isMobile && (
-              <Chip
-                label={`${participantCount} PEERS_CONNECTED`}
-                size="small"
-                sx={{ fontWeight: 700, fontFamily: 'Space Mono, monospace', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}
-              />
+              <Chip label={`${participantCount} PEERS_CONNECTED`} size="small" sx={{ fontWeight: 700, fontFamily: 'Space Mono, monospace', borderRadius: 1, bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }} />
             )}
           </Stack>
         </Toolbar>
@@ -269,181 +130,35 @@ export default function VideosMeeting() {
           {participantCount === 2 ? (
             <>
               {remoteVideos.map((v) => (
-                <VideoTile
-                  key={v.id}
-                  username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`}
-                  stream={v.stream}
-                />
+                <VideoTile key={v.id} username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`} stream={v.stream} />
               ))}
               <PIPContainer isMobile={isMobile}>
-                <VideoTile
-                  isLocal
-                  isPIP
-                  username={`${username} (YOU)`}
-                  stream={localStream}
-                  isMuted={!audioEnabled}
-                  isVideoOff={!videoEnabled}
-                />
+                <VideoTile isLocal isPIP username={`${username} (YOU)`} stream={localStream} isMuted={!audioEnabled} isVideoOff={!videoEnabled} />
               </PIPContainer>
             </>
           ) : (
             <>
-              <VideoTile
-                isLocal
-                username={`${username} (YOU)`}
-                stream={localStream}
-                isMuted={!audioEnabled}
-                isVideoOff={!videoEnabled}
-              />
+              <VideoTile isLocal username={`${username} (YOU)`} stream={localStream} isMuted={!audioEnabled} isVideoOff={!videoEnabled} />
               {remoteVideos.map((v) => (
-                <VideoTile
-                  key={v.id}
-                  username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`}
-                  stream={v.stream}
-                />
+                <VideoTile key={v.id} username={v.username || `PEER_${v.id.substring(0, 4).toUpperCase()}`} stream={v.stream} />
               ))}
             </>
           )}
         </DynamicGrid>
 
-        <ChatDrawer
-          anchor={isMobile ? "bottom" : "right"}
-          open={showChat}
-          onClose={() => setShowChat(false)}
-          variant={isMobile ? "temporary" : "persistent"}
-          isMobile={isMobile}
-          sx={{ '& .MuiDrawer-paper': { height: isMobile ? '100dvh' : '100%' } }}
-        >
-          <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2 }}>Chats</Typography>
-            <IconButton onClick={() => setShowChat(false)} size="small"><Close fontSize="small" /></IconButton>
-          </Box>
-          <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {messages.map((m, i) => (
-              <Box key={i} sx={{ alignSelf: m.sender === username ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, fontFamily: 'Space Mono, monospace', mb: 0.5, display: 'block', fontSize: '0.65rem' }}>
-                  [{m.sender.toUpperCase()}] {'>'} {m.time}
-                </Typography>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: m.sender === username ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.text.primary, 0.03),
-                    border: `1px solid ${m.sender === username ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.divider, 0.1)}`,
-                    borderRadius: 1,
-                  }}
-                >
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>{m.message}</Typography>
-                </Paper>
-              </Box>
-            ))}
-          </Box>
-          <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.1) }} />
-          <Box sx={{ p: 2, display: 'flex', gap: 1, mb: isMobile ? 4 : 0 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="INPUT_MESSAGE..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              sx={{ '& .MuiOutlinedInput-root': { fontFamily: 'Space Mono, monospace', fontSize: '0.8rem' } }}
-            />
-            <IconButton color="primary" onClick={handleSendMessage} disabled={!message.trim()} sx={{ border: 1, borderColor: alpha(theme.palette.primary.main, 0.2) }}>
-              <Send fontSize="small" />
-            </IconButton>
-          </Box>
-        </ChatDrawer>
-
-        {/* Share Session Drawer */}
-        <Drawer
-          anchor="bottom"
-          open={showShare}
-          onClose={() => setShowShare(false)}
-          PaperProps={{
-            sx: {
-              borderTopLeftRadius: theme.shape.borderRadius * 3,
-              borderTopRightRadius: theme.shape.borderRadius * 3,
-              bgcolor: 'background.paper',
-              backgroundImage: 'none',
-              maxWidth: 600,
-              mx: 'auto',
-              width: '100%',
-              p: 3,
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.5px' }}>
-                Share Session
-              </Typography>
-              <IconButton onClick={() => setShowShare(false)} size="small" sx={{ bgcolor: alpha(theme.palette.text.primary, 0.05) }}>
-                <Close fontSize="small" />
-              </IconButton>
-            </Box>
-            
-            <Typography variant="body2" color="text.secondary">
-              Anyone with this link can join the meeting.
-            </Typography>
-
-            <Paper
-              elevation={0}
-              sx={{
-                p: 1,
-                mt: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                borderRadius: 2,
-              }}
-            >
-              <TextField
-                fullWidth
-                size="small"
-                value={window.location.href}
-                variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                  readOnly: true,
-                  sx: { fontSize: '0.85rem', color: 'text.primary', ml: 1, fontFamily: 'Space Mono, monospace' }
-                }}
-              />
-              <IconButton
-                color={copied ? "success" : "primary"}
-                onClick={handleCopyLink}
-                sx={{ flexShrink: 0 }}
-              >
-                {copied ? <CheckCircle /> : <ContentCopy />}
-              </IconButton>
-            </Paper>
-          </Box>
-        </Drawer>
+        <ChatDrawer isMobile={isMobile} username={username} />
+        <ShareDrawer />
       </MainContent>
 
-      <MeetingControls
-        isMuted={!audioEnabled}
-        onToggleMute={() => {
-          const nextState = !audioEnabled;
-          setAudioEnabled(nextState);
-          toggleAudio(nextState);
-        }}
-        isVideoOff={!videoEnabled}
-        onToggleVideo={() => {
-          const nextState = !videoEnabled;
-          setVideoEnabled(nextState);
-          toggleVideo(nextState);
-        }}
-        isScreenSharing={screenSharing}
-        onToggleScreenShare={handleScreen}
-        onEndCall={handleEndCall}
-        onToggleChat={() => setShowChat(!showChat)}
-        onToggleParticipants={() => { }}
-        onShareSession={() => setShowShare(true)}
-      />
+      <MeetingControls onEndCall={handleEndCall} />
     </MeetingWrapper>
   );
+}
+
+export default function VideosMeeting() {
+    return (
+        <MeetingProvider>
+            <MeetingRoom />
+        </MeetingProvider>
+    );
 }

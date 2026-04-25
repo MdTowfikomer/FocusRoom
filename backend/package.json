@@ -1,9 +1,9 @@
 {
-  "name": "towfik",
+  "name": "focus-room",
   "version": "1.0.0",
   "description": "A video conferencing web application",
   "license": "ISC",
-  "author": "towfik",
+  "author": "MD Towfik Omer",
   "type": "module",
   "main": "index.js",
   "scripts": {

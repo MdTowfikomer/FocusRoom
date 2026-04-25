@@ -4,6 +4,7 @@ import { Mic, MicOff, Videocam, VideocamOff, ScreenShare, DarkMode, LightMode } 
 import { styled, alpha } from '@mui/material/styles';
 import { useColorMode } from '../contexts/ColorModeContext';
 import { useTheme } from '@mui/material/styles';
+import { useMeeting } from '../contexts/MeetingContext';
 
 /* ─── Styled Components ─── */
 
@@ -138,13 +139,15 @@ const ThemeToggle = styled(IconButton)(({ theme }) => ({
 /* ─── Component ─── */
 
 export default function Lobby({
-  username, setUsername,
-  videoEnabled, setVideoEnabled,
-  audioEnabled, setAudioEnabled,
-  onJoin, localStream
+  username, setUsername, onJoin
 }) {
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
+  const { 
+    videoEnabled, setVideoEnabled, 
+    audioEnabled, setAudioEnabled, 
+    localStream 
+  } = useMeeting();
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && username.trim()) {
